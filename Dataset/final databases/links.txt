@@ -1,0 +1,5 @@
+https://data.mendeley.com/datasets/f45bkkt8pr/1
+https://archive-beta.ics.uci.edu/dataset/228/sms%2Bspam%2Bcollection
+https://download.companieshouse.gov.uk/en_output.html
+https://github.com/MWiechmann/enron_spam_data
+https://data.mendeley.com/datasets/vmg875v4xs/1
