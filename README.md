@@ -359,4 +359,7 @@ The quality target (`quality_score_rule`) is a continuous value in [0, 1] derive
 
 ## License
 
-This project is released for academic and research purposes. See `LICENSE` for details.
+This project is released for academic and research purposes. Do cite the author.
+Name: Sheikh Khairul Momin Mohammad Tahmid
+Email: sheikh.k.m.m.tahmid@gmail.com
+Date of Completion: 24th March 2026
