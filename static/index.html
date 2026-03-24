@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lead AI Console</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+
+        body {
+            background-color: #0a0608;
+            background-image:
+                radial-gradient(ellipse 80% 50% at 15% -10%, rgba(174, 0, 1, 0.13), transparent),
+                radial-gradient(ellipse 60% 40% at 85% 110%, rgba(212, 160, 23, 0.08), transparent),
+                radial-gradient(ellipse 40% 30% at 50% 50%, rgba(116, 0, 1, 0.04), transparent);
+            color: #e2e8f0;
+            overflow: hidden;
+        }
+
+        /* ── Subtle grid texture ─────────────────────────────────────── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px);
+            background-size: 48px 48px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ── Sidebar ─────────────────────────────────────────────────── */
+        .sidebar {
+            background: linear-gradient(180deg, rgba(10,13,22,0.98) 0%, rgba(7,9,16,0.99) 100%);
+            border-right: 1px solid rgba(255,255,255,0.055);
+            width: 80px;
+            min-width: 80px;
+            transition: width 0.3s cubic-bezier(.4,0,.2,1), min-width 0.3s cubic-bezier(.4,0,.2,1), box-shadow 0.3s ease;
+            overflow: hidden;
+            position: relative;
+            z-index: 20;
+            flex-shrink: 0;
+        }
+
+        .sidebar.expanded,
+        .sidebar:hover {
+            width: 240px;
+            min-width: 240px;
+            box-shadow: 12px 0 48px rgba(0,0,0,0.5);
+        }
+
+        .sidebar-label,
+        .sidebar-subtext,
+        .sidebar-section-title,
+        .sidebar-expanded-only {
+            opacity: 0;
+            transform: translateX(-10px);
+            transition: opacity 0.22s ease, transform 0.22s ease;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        .sidebar-footer {
+            opacity: 0;
+            transform: translateX(-10px);
+            transition: opacity 0.22s ease, transform 0.22s ease;
+            pointer-events: none;
+            white-space: normal;
+        }
+
+        .sidebar.expanded .sidebar-label,
+        .sidebar.expanded .sidebar-subtext,
+        .sidebar.expanded .sidebar-section-title,
+        .sidebar.expanded .sidebar-footer,
+        .sidebar.expanded .sidebar-expanded-only,
+        .sidebar:hover .sidebar-label,
+        .sidebar:hover .sidebar-subtext,
+        .sidebar:hover .sidebar-section-title,
+        .sidebar:hover .sidebar-footer,
+        .sidebar:hover .sidebar-expanded-only {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: auto;
+        }
+
+        /* ── Logo mark ──────────────────────────────────────────────── */
+        .logo-mark {
+            width: 34px;
+            height: 34px;
+            min-width: 34px;
+            background: linear-gradient(135deg, #ae0001, #740001);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 14px rgba(174,0,1,0.4);
+        }
+
+        /* ── Nav item ────────────────────────────────────────────────── */
+        .nav-item {
+            border: 1px solid transparent;
+            background: transparent;
+            transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+            cursor: pointer;
+        }
+
+        .nav-item:hover {
+            background: rgba(255,255,255,0.04);
+            border-color: rgba(255,255,255,0.08);
+            transform: translateX(2px);
+        }
+
+        .nav-item.active {
+            background: linear-gradient(90deg, rgba(174,0,1,0.18), rgba(174,0,1,0.05));
+            border-color: rgba(174,0,1,0.35);
+        }
+
+        .nav-item.active .nav-icon { color: #d4a017; }
+
+        /* ── Panels ──────────────────────────────────────────────────── */
+        .main-shell {
+            background: rgba(12,16,26,0.75);
+            border: 1px solid rgba(255,255,255,0.065);
+            box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+
+        .panel {
+            background: rgba(255,255,255,0.026);
+            border: 1px solid rgba(255,255,255,0.065);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        /* ── Input ───────────────────────────────────────────────────── */
+        .input-dark {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #e2e8f0;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+
+        .input-dark::placeholder { color: rgba(255,255,255,0.2); }
+
+        .input-dark:focus {
+            border-color: rgba(212,160,23,0.65);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(212,160,23,0.12);
+            background: rgba(255,255,255,0.06);
+        }
+
+        .input-error {
+            border-color: #f43f5e !important;
+            box-shadow: 0 0 0 3px rgba(244,63,94,0.14) !important;
+        }
+
+        /* Style native selects to match */
+        select.input-dark option {
+            background: #0d1117;
+            color: #e2e8f0;
+        }
+
+        /* ── Labels ──────────────────────────────────────────────────── */
+        .field-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.38);
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .required-star { color: #d4a017; margin-left: 3px; }
+
+        /* ── CTA button ──────────────────────────────────────────────── */
+        .cta-btn {
+            background: linear-gradient(135deg, #ae0001 0%, #740001 100%);
+            box-shadow: 0 8px 24px rgba(174,0,1,0.35), 0 2px 6px rgba(0,0,0,0.3);
+            transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+            color: #fdf0d0;
+            font-weight: 700;
+        }
+
+        .cta-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 32px rgba(174,0,1,0.45), 0 4px 10px rgba(0,0,0,0.35);
+        }
+
+        .cta-btn:active { transform: translateY(0); }
+
+        .cta-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        /* ── Spinner ─────────────────────────────────────────────────── */
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(10,13,22,0.3);
+            border-top-color: #0a0d14;
+            border-radius: 50%;
+            animation: spin 0.75s linear infinite;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Live dot ────────────────────────────────────────────────── */
+        .live-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #d4a017;
+            box-shadow: 0 0 0 0 rgba(212,160,23,0.5);
+            animation: pulse-dot 2s infinite;
+            flex-shrink: 0;
+        }
+
+        @keyframes pulse-dot {
+            0%   { box-shadow: 0 0 0 0 rgba(212,160,23,0.5); }
+            70%  { box-shadow: 0 0 0 6px rgba(212,160,23,0); }
+            100% { box-shadow: 0 0 0 0 rgba(212,160,23,0); }
+        }
+
+        /* ── Result label ────────────────────────────────────────────── */
+        .result-label {
+            font-size: 0.66rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(255,255,255,0.32);
+        }
+
+        /* ── Metric card ─────────────────────────────────────────────── */
+        .metric-card {
+            background: rgba(255,255,255,0.028);
+            border: 1px solid rgba(255,255,255,0.07);
+            position: relative;
+            overflow: hidden;
+            transition: border-color 0.2s ease, transform 0.2s ease;
+        }
+
+        .metric-card:hover {
+            border-color: rgba(255,255,255,0.12);
+            transform: translateY(-2px);
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #ae0001, #d4a017);
+            opacity: 0.8;
+        }
+
+        /* ── Feedback btns ───────────────────────────────────────────── */
+        .feedback-btn {
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.04);
+            color: rgba(255,255,255,0.55);
+            font-weight: 500;
+            transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.15s ease;
+        }
+
+        .feedback-btn:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.2);
+            color: #fff;
+            transform: translateY(-1px);
+        }
+
+        .feedback-btn.selected-good  { background: rgba(16,185,129,0.12); border-color: rgba(16,185,129,0.45); color: #6ee7b7; }
+        .feedback-btn.selected-bad   { background: rgba(244,63,94,0.12);  border-color: rgba(244,63,94,0.45);  color: #fda4af; }
+        .feedback-btn.selected-partial { background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.45); color: #fde68a; }
+
+        .feedback-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+        /* ── Divider ─────────────────────────────────────────────────── */
+        .soft-divider { border-color: rgba(255,255,255,0.065); }
+
+        /* ── Modal ───────────────────────────────────────────────────── */
+        .modal-backdrop { background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); }
+
+        /* ── Section badge ───────────────────────────────────────────── */
+        .section-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.3);
+        }
+
+        /* ── Gradient text ───────────────────────────────────────────── */
+        .gradient-text {
+            background: linear-gradient(135deg, #ffffff 0%, #c7d2fe 60%, #a5b4fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: #ffffff; /* fallback if clip fails */
+        }
+
+        /* ── Tag pill ────────────────────────────────────────────────── */
+        .tag-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
+            border-radius: 99px;
+            font-size: 0.68rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+        }
+
+        /* ── Table ───────────────────────────────────────────────────── */
+        #res_table tr:nth-child(even) td { background: rgba(255,255,255,0.018); }
+        #res_table td { transition: background 0.15s ease; }
+        #res_table tr:hover td { background: rgba(255,255,255,0.04); }
+
+        /* ── Scrollbar ───────────────────────────────────────────────── */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 99px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); }
+
+        /* ── Sidebar connection panel ────────────────────────────────── */
+        .conn-panel {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 14px;
+        }
+
+        /* ── Icon container ──────────────────────────────────────────── */
+        .icon-wrap {
+            min-width: 20px;
+            width: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+
+<body class="flex h-screen overflow-hidden relative z-10">
+
+<!-- ═══════════════════════════════════════════════════════ SIDEBAR ══ -->
+<aside id="sidebar" class="sidebar h-full flex flex-col py-4 gap-5">
+
+    <!-- Branding -->
+    <div class="px-3 flex items-center gap-3">
+        <div class="logo-mark">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="rgba(10,13,22,0.85)">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+            </svg>
+        </div>
+        <div class="sidebar-expanded-only">
+            <p class="text-[13px] font-700 text-white tracking-tight leading-none">Lead AI Console</p>
+            <p class="sidebar-subtext text-[10px] mt-0.5 font-medium tracking-wide" style="color:rgba(212,160,23,0.75);">INTELLIGENCE PLATFORM</p>
+        </div>
+    </div>
+
+    <!-- Nav -->
+    <div class="px-3 flex flex-col gap-1">
+        <p class="sidebar-section-title text-[9px] uppercase tracking-[0.22em] text-white/20 mb-1 px-2 font-semibold">Workspace</p>
+
+        <div class="nav-item rounded-xl px-3 py-2.5 flex items-center gap-3 active">
+            <div class="icon-wrap nav-icon text-white/35">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M5 3a2 2 0 0 0-2 2v14l4-3h12a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
+                </svg>
+            </div>
+            <div class="sidebar-label">
+                <p class="text-[13px] text-white font-semibold leading-none">Lead Scoring</p>
+                <p class="sidebar-subtext text-[10px] text-white/35 mt-0.5">Live quality assessment</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Connection -->
+    <div class="px-3 flex flex-col gap-2 mt-1">
+        <p class="sidebar-section-title text-[9px] uppercase tracking-[0.22em] text-white/20 px-2 font-semibold">Connection</p>
+
+        <!-- Icon row — always visible in collapsed and expanded mode -->
+        <div class="nav-item rounded-xl px-3 py-2.5 flex items-center gap-3">
+            <div class="icon-wrap text-indigo-400/70 flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+                    <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+                    <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+                    <circle cx="12" cy="20" r="1" fill="currentColor"/>
+                </svg>
+            </div>
+            <div class="sidebar-label">
+                <p class="text-[13px] text-white/70 font-semibold leading-none">API Connection</p>
+                <p class="sidebar-subtext text-[10px] text-white/30 mt-0.5">Configure endpoint</p>
+            </div>
+        </div>
+
+        <!-- Panel body — only visible when sidebar is expanded -->
+        <div class="sidebar-expanded-only" style="white-space:normal;">
+            <div class="conn-panel p-3">
+                <p class="text-[11px] text-white/40 font-medium uppercase tracking-wide mb-2">API base URL</p>
+                <input type="text" id="api_url" value="http://127.0.0.1:8000"
+                    class="input-dark w-full px-3 py-2 rounded-xl text-xs font-mono">
+                <button id="check_api_btn"
+                    class="mt-2.5 w-full border border-white/10 hover:border-white/20 text-white/55 hover:text-white px-4 py-2 rounded-xl text-xs font-medium transition-all hover:bg-white/05">
+                    Check API
+                </button>
+                <label class="mt-2.5 flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="debug_toggle" class="rounded-sm bg-white/10 border-white/20">
+                    <span class="text-[11px] text-white/35 font-medium">Debug output</span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toggle pin -->
+    <div class="px-3 flex items-center justify-end">
+        <button id="sidebar_toggle"
+            class="sidebar-expanded-only text-white/20 hover:text-white/60 transition p-1 rounded-lg hover:bg-white/05">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="m15.41 7.41-1.41-1.41L8.59 11.41 14 16.83l1.41-1.41L11.41 11z"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Footer note -->
+    <div class="mt-auto px-3">
+        <div class="sidebar-footer conn-panel px-3 py-2.5">
+            <p class="text-[10px] text-white/25 leading-5 font-medium">
+                SMTP validation adds a short delay while domain signals are verified.
+            </p>
+        </div>
+    </div>
+</aside>
+
+<!-- ══════════════════════════════════════════════════════════ MAIN ══ -->
+<main class="flex-1 overflow-y-auto p-5 lg:p-7 relative z-10">
+    <div class="main-shell rounded-3xl p-6 lg:p-8 min-h-full">
+
+        <!-- Header -->
+        <header class="mb-9">
+            <div class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-5">
+                <div>
+                    <div class="section-badge mb-3">
+                        <div class="live-dot"></div>
+                        Lead analysis workspace
+                    </div>
+                    <h1 class="text-[2.4rem] lg:text-[2.75rem] font-800 gradient-text leading-none tracking-tight">
+                        Assess a Lead
+                    </h1>
+                    <p class="text-[13px] text-white/35 mt-3.5 max-w-2xl leading-6 font-medium">
+                        Enter company details, contact email, website, and the incoming message.
+                        Fields marked <span style="color:#d4a017;">*</span> are mandatory.
+                        The engine runs BERT, RoBERTa, and XGBoost on every submission.
+                    </p>
+                </div>
+
+                <!-- Runtime badge -->
+                <div class="panel rounded-2xl px-4 py-3 self-start flex-shrink-0">
+                    <p class="text-[9px] uppercase tracking-[0.2em] text-white/25 font-semibold mb-1.5">Runtime stack</p>
+                    <div class="flex flex-col gap-1">
+                        <div class="flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background:#ae0001;"></span>
+                            <p class="text-[11px] text-white/60 font-semibold">BERT + RoBERTa</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background:#d4a017;"></span>
+                            <p class="text-[11px] text-white/60 font-semibold">XGBoost + SHAP</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background:#740001;"></span>
+                            <p class="text-[11px] text-white/60 font-semibold">SMTP + DNS</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Form + Message -->
+        <div class="grid grid-cols-12 gap-6 mb-10">
+
+            <!-- Form -->
+            <div class="col-span-12 xl:col-span-7">
+                <div class="panel rounded-3xl p-6 lg:p-7 space-y-5">
+                    <p class="text-[9px] uppercase tracking-[0.2em] text-white/22 font-semibold">Company details</p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="field-label">Company name <span class="required-star">*</span></label>
+                            <input type="text" id="company_name"
+                                class="input-dark w-full px-4 py-3 rounded-xl text-sm mandatory-field"
+                                placeholder="e.g. Acme Corporation Ltd">
+                        </div>
+
+                        <div>
+                            <label class="field-label">Contact email</label>
+                            <input type="email" id="contact_email"
+                                class="input-dark w-full px-4 py-3 rounded-xl text-sm"
+                                placeholder="name@company.com">
+                        </div>
+
+                        <div>
+                            <label class="field-label">Website URL</label>
+                            <input type="text" id="website_url"
+                                class="input-dark w-full px-4 py-3 rounded-xl text-sm"
+                                placeholder="https://company.com">
+                        </div>
+
+                        <div>
+                            <label class="field-label">Company age (years) <span class="required-star">*</span></label>
+                            <input type="number" id="age" value="0"
+                                class="input-dark w-full px-4 py-3 rounded-xl text-sm mandatory-field">
+                        </div>
+
+                        <div>
+                            <label class="field-label">Avg review score <span class="required-star">*</span></label>
+                            <input type="number" id="avg_score" value="0"
+                                class="input-dark w-full px-4 py-3 rounded-xl text-sm mandatory-field"
+                                placeholder="0 – 5">
+                        </div>
+
+                        <div>
+                            <label class="field-label">Number of reviews <span class="required-star">*</span></label>
+                            <input type="number" id="reviews" value="0"
+                                class="input-dark w-full px-4 py-3 rounded-xl text-sm mandatory-field">
+                        </div>
+
+                        <div>
+                            <label class="field-label">Industry</label>
+                            <input type="text" id="industry"
+                                class="input-dark w-full px-4 py-3 rounded-xl text-sm"
+                                placeholder="e.g. Technology">
+                        </div>
+
+                        <div>
+                            <label class="field-label">Company status</label>
+                            <select id="status" class="input-dark w-full px-4 py-3 rounded-xl text-sm">
+                                <option value="active">Active</option>
+                                <option value="dissolved">Dissolved</option>
+                                <option value="unknown" selected>Unknown</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="field-label">Company type</label>
+                            <select id="type" class="input-dark w-full px-4 py-3 rounded-xl text-sm">
+                                <option value="private-limited">Private Limited</option>
+                                <option value="public-limited">Public Limited</option>
+                                <option value="unknown" selected>Unknown</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="field-label">Company size</label>
+                            <select id="size" class="input-dark w-full px-4 py-3 rounded-xl text-sm">
+                                <option value="small">Small</option>
+                                <option value="medium">Medium</option>
+                                <option value="large">Large</option>
+                                <option value="unknown" selected>Unknown</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="field-label">Country</label>
+                            <input type="text" id="country"
+                                class="input-dark w-full px-4 py-3 rounded-xl text-sm"
+                                placeholder="e.g. United Kingdom">
+                        </div>
+
+                        <div>
+                            <label class="field-label">Location</label>
+                            <input type="text" id="location"
+                                class="input-dark w-full px-4 py-3 rounded-xl text-sm"
+                                placeholder="e.g. London">
+                        </div>
+
+                        <div>
+                            <label class="field-label">Email / domain type</label>
+                            <select id="domain" class="input-dark w-full px-4 py-3 rounded-xl text-sm">
+                                <option value="corporate">Corporate</option>
+                                <option value="free">Free provider</option>
+                                <option value="unknown" selected>Unknown</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="field-label">Lead source</label>
+                            <select id="source" class="input-dark w-full px-4 py-3 rounded-xl text-sm">
+                                <option value="sms_spam_collection">SMS Spam Collection</option>
+                                <option value="dataset_10191">Dataset 10191</option>
+                                <option value="dataset_5971">Dataset 5971</option>
+                                <option value="enron">Enron</option>
+                                <option value="unknown" selected>Unknown</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="pt-2">
+                        <button id="btn_assess"
+                            class="cta-btn px-8 py-3.5 rounded-2xl text-sm flex items-center justify-center gap-3 min-w-[200px]">
+                            <span id="btn_spinner" class="spinner hidden"></span>
+                            <svg id="btn_icon" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                            </svg>
+                            <span id="btn_text">Assess Lead</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Message -->
+            <div class="col-span-12 xl:col-span-5">
+                <div class="panel rounded-3xl p-6 lg:p-7 h-full flex flex-col">
+                    <div class="flex items-center justify-between mb-3">
+                        <label class="field-label mb-0">Incoming message <span class="required-star">*</span></label>
+                        <span class="tag-pill bg-indigo-500/10 text-indigo-300/70 border border-indigo-500/15 text-[9px] font-700 tracking-widest uppercase">NLP Input</span>
+                    </div>
+                    <textarea id="message"
+                        class="input-dark flex-1 min-h-[480px] rounded-2xl p-4 resize-none mandatory-field text-sm leading-6"
+                        placeholder="Paste or type the incoming message here..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Results ───────────────────────────────────────────────── -->
+        <div id="results_container" class="hidden space-y-8 border-t soft-divider pt-10 pb-6">
+
+            <!-- Results header -->
+            <div class="flex items-center justify-between gap-4">
+                <div>
+                    <div class="section-badge mb-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" style="color:#d4a017;" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17 5.8 21.3l2.4-7.4L2 9.4h7.6z"/>
+                        </svg>
+                        Assessment result
+                    </div>
+                    <h3 class="text-2xl font-700 gradient-text tracking-tight">Lead Assessment</h3>
+                </div>
+                <div class="flex items-center gap-2 text-[10px] text-white/22 uppercase tracking-widest font-semibold">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm1 15h-2v-6h2zm0-8h-2V7h2z"/>
+                    </svg>
+                    From API response
+                </div>
+            </div>
+
+            <!-- Metrics -->
+            <div id="metrics_grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4"></div>
+
+            <!-- Reasons + Summary -->
+            <div class="grid grid-cols-1 xl:grid-cols-12 gap-5">
+                <div id="reasons_section" class="xl:col-span-5 panel rounded-3xl p-6">
+                    <div class="flex items-center gap-2.5 mb-5">
+                        <div class="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(212,160,23,0.12);">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" style="color:#d4a017;" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm1 15h-2v-6h2zm0-8h-2V7h2z"/>
+                            </svg>
+                        </div>
+                        <h4 class="text-[13px] font-700 text-white tracking-tight">Why this score was given</h4>
+                    </div>
+                    <ol id="res_reasons" class="space-y-2.5 text-[13px] text-white/55 leading-6"></ol>
+                </div>
+
+                <div id="summary_callout" class="xl:col-span-7 rounded-3xl p-6 relative overflow-hidden"
+                     style="background: linear-gradient(135deg, rgba(212,160,23,0.08) 0%, rgba(174,0,1,0.06) 100%); border: 1px solid rgba(212,160,23,0.18);">
+                    <div class="absolute top-0 left-0 w-1 h-full rounded-l-3xl"
+                         style="background: linear-gradient(180deg, #d4a017, #ae0001);"></div>
+                    <p class="text-[9px] uppercase tracking-[0.2em] font-semibold mb-3" style="color:rgba(212,160,23,0.5);">Executive Summary</p>
+                    <p id="res_summary_text" class="text-[13px] leading-7 font-medium" style="color:rgba(253,240,208,0.75);"></p>
+                </div>
+            </div>
+
+            <!-- Feedback -->
+            <div id="feedback_section" class="panel rounded-3xl p-6"
+                 style="border-color: rgba(255,255,255,0.07);">
+                <div id="feedback_prompt">
+                    <div class="flex items-center gap-2.5 mb-1">
+                        <div class="w-5 h-5 rounded-lg bg-white/05 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-white/40" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16zm-1-5h2v2h-2zm0-8h2v6h-2z"/>
+                            </svg>
+                        </div>
+                        <p class="text-[13px] font-600 text-white/75">Was this assessment correct?</p>
+                    </div>
+                    <p class="text-[11px] text-white/28 mb-4 ml-7 font-medium">Your feedback is used to retrain the models.</p>
+                    <div class="flex flex-wrap gap-2.5 ml-7">
+                        <button data-quality="good_lead" data-spam="ham"
+                            class="feedback-btn px-5 py-2.5 rounded-xl text-[12px]">
+                            &#10003;&nbsp; Yes, good lead
+                        </button>
+                        <button data-quality="bad_lead" data-spam="spam"
+                            class="feedback-btn px-5 py-2.5 rounded-xl text-[12px]">
+                            &#10007;&nbsp; No, this is spam
+                        </button>
+                        <button data-quality="bad_lead" data-spam="ham"
+                            class="feedback-btn px-5 py-2.5 rounded-xl text-[12px]">
+                            &#126;&nbsp; Partially right
+                        </button>
+                    </div>
+                    <div class="mt-4 ml-7 hidden" id="feedback_notes_row">
+                        <div class="flex flex-col md:flex-row gap-2.5">
+                            <input type="text" id="feedback_notes"
+                                placeholder="Optional note, e.g. &quot;known spammer&quot;"
+                                class="input-dark flex-1 px-4 py-2.5 rounded-xl text-sm">
+                            <button id="feedback_submit_btn"
+                                class="cta-btn px-6 py-2.5 rounded-xl text-[12px] flex-shrink-0">
+                                Submit feedback
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div id="feedback_thanks" class="hidden items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-[13px] font-600 text-white/80">Feedback recorded</p>
+                        <p class="text-[11px] text-white/28 mt-0.5">This will be used to improve future scoring.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Checks table -->
+            <div id="checks_section" class="panel rounded-3xl p-6">
+                <div class="flex items-center gap-2.5 mb-5">
+                    <div class="w-6 h-6 rounded-lg bg-emerald-500/12 flex items-center justify-center flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-emerald-400" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                        </svg>
+                    </div>
+                    <h4 class="text-[13px] font-700 text-white tracking-tight">Automatic checks performed</h4>
+                </div>
+                <div class="border soft-divider rounded-2xl overflow-hidden">
+                    <table class="w-full text-left text-sm">
+                        <thead style="background: rgba(255,255,255,0.03);">
+                            <tr class="border-b soft-divider">
+                                <th class="px-4 py-3 text-[10px] uppercase tracking-[0.14em] text-white/28 font-semibold">Check</th>
+                                <th class="px-4 py-3 text-[10px] uppercase tracking-[0.14em] text-white/28 font-semibold">Value</th>
+                            </tr>
+                        </thead>
+                        <tbody id="res_table"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Debug -->
+            <div id="debug_area" class="hidden panel rounded-3xl p-6">
+                <div class="flex items-center gap-2.5 mb-5">
+                    <div class="w-6 h-6 rounded-lg bg-white/05 flex items-center justify-center flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-white/35" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M20 8h-2.81A5.98 5.98 0 0 0 12 5a5.98 5.98 0 0 0-5.19 3H4a1 1 0 0 0 0 2h1.09A6 6 0 0 0 5 11v1H4a1 1 0 0 0 0 2h1v1a6 6 0 0 0 .09 1H4a1 1 0 0 0 0 2h2.81A5.99 5.99 0 0 0 18 17v-1h1a1 1 0 0 0 0-2h-1v-1a6 6 0 0 0-.09-1H20a1 1 0 0 0 0-2z"/>
+                        </svg>
+                    </div>
+                    <h4 class="text-[13px] font-700 text-white tracking-tight">API debug output</h4>
+                </div>
+                <pre id="api_output"
+                    class="text-[11px] font-mono text-emerald-400/80 leading-5 overflow-auto max-h-[480px] p-5 rounded-2xl"
+                    style="background: rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.06);"></pre>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- ══════════════════════════════════════════════════════════ MODAL ══ -->
+<div id="custom_modal" class="hidden fixed inset-0 z-50 modal-backdrop items-center justify-center">
+    <div class="w-[92%] max-w-md rounded-3xl p-7 shadow-2xl"
+         style="background: #0d1117; border: 1px solid rgba(255,255,255,0.1);">
+        <div class="flex items-start gap-4 mb-5">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                 style="background: rgba(244,63,94,0.14); border: 1px solid rgba(244,63,94,0.25);">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-rose-400" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm1 15h-2v-2h2zm0-4h-2V7h2z"/>
+                </svg>
+            </div>
+            <div>
+                <h4 id="modal_title" class="text-[15px] font-700 text-white tracking-tight">Validation</h4>
+                <p id="modal_message" class="text-[13px] text-white/50 mt-2 leading-6"></p>
+            </div>
+        </div>
+        <div class="flex justify-end">
+            <button id="modal_ok_btn"
+                class="cta-btn px-6 py-2.5 rounded-xl text-sm">
+                OK
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    let sidebarPinned = false;
+    let currentLeadLogId = null;
+    let pendingFeedback = { quality: null, spam: null };
+
+    function applySidebarState() {
+        if (sidebarPinned) {
+            $('#sidebar').addClass('expanded');
+        } else {
+            $('#sidebar').removeClass('expanded');
+        }
+    }
+
+    $('#sidebar_toggle').click(function() {
+        sidebarPinned = !sidebarPinned;
+        applySidebarState();
+    });
+
+    function showModal(title, message) {
+        $('#modal_title').text(title);
+        $('#modal_message').html(message);
+        $('#custom_modal').removeClass('hidden').addClass('flex');
+    }
+
+    function hideModal() {
+        $('#custom_modal').addClass('hidden').removeClass('flex');
+    }
+
+    function setLoadingState(isLoading) {
+        $('#btn_assess').prop('disabled', isLoading);
+        $('#btn_spinner').toggleClass('hidden', !isLoading);
+        $('#btn_icon').toggleClass('hidden', isLoading);
+        $('#btn_text').text(isLoading ? 'Assessing...' : 'Assess Lead');
+    }
+
+    function clearInputErrors() {
+        $('.mandatory-field').removeClass('input-error');
+    }
+
+    function validateForm() {
+        clearInputErrors();
+        const missing = [];
+
+        const companyName = $('#company_name').val().trim();
+        const age         = $('#age').val().trim();
+        const avgScore    = $('#avg_score').val().trim();
+        const reviews     = $('#reviews').val().trim();
+        const message     = $('#message').val().trim();
+
+        if (!companyName)  { $('#company_name').addClass('input-error'); missing.push('Company name'); }
+        if (age === '')    { $('#age').addClass('input-error');           missing.push('Age (years)'); }
+        if (avgScore === ''){ $('#avg_score').addClass('input-error');    missing.push('Avg review score'); }
+        if (reviews === '') { $('#reviews').addClass('input-error');      missing.push('Number of reviews'); }
+        if (!message)      { $('#message').addClass('input-error');       missing.push('Incoming message'); }
+
+        if (missing.length > 0) {
+            showModal(
+                'Missing required fields',
+                `Please complete the following field(s):<br><br><strong>${missing.join('<br>')}</strong>`
+            );
+            return false;
+        }
+
+        const avgScoreNum = parseFloat(avgScore);
+        if (isNaN(avgScoreNum) || avgScoreNum < 0 || avgScoreNum > 5) {
+            $('#avg_score').addClass('input-error');
+            showModal('Invalid value', 'Average review score must be between <strong>0</strong> and <strong>5</strong>.');
+            return false;
+        }
+
+        const ageNum = parseFloat(age);
+        if (isNaN(ageNum) || ageNum < 0) {
+            $('#age').addClass('input-error');
+            showModal('Invalid value', 'Company age must be <strong>0 or greater</strong>.');
+            return false;
+        }
+
+        const reviewsNum = parseInt(reviews);
+        if (isNaN(reviewsNum) || reviewsNum < 0) {
+            $('#reviews').addClass('input-error');
+            showModal('Invalid value', 'Review count must be a whole number <strong>0 or greater</strong>.');
+            return false;
+        }
+
+        return true;
+    }
+
+    $('#modal_ok_btn').click(hideModal);
+    $('#custom_modal').click(function(e) {
+        if (e.target.id === 'custom_modal') hideModal();
+    });
+
+    $('.mandatory-field').on('input change', function() {
+        $(this).removeClass('input-error');
+    });
+
+    $('#btn_assess').click(function() {
+        if (!validateForm()) return;
+
+        const baseUrl = $('#api_url').val().replace(/\/$/, '');
+        setLoadingState(true);
+
+        $.ajax({
+            url: baseUrl + "/score",
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                "company_name":      $('#company_name').val().trim(),
+                "contact_email":     $('#contact_email').val().trim(),
+                "website_url":       $('#website_url').val().trim(),
+                "company_age_years": parseFloat($('#age').val()),
+                "avg_review_score":  parseFloat($('#avg_score').val()),
+                "review_count":      parseInt($('#reviews').val()),
+                "company_status":    $('#status').val(),
+                "company_category":  $('#type').val(),
+                "industry":          $('#industry').val().trim(),
+                "company_size":      $('#size').val(),
+                "country":           $('#country').val().trim(),
+                "location":          $('#location').val().trim(),
+                "domain_type":       $('#domain').val(),
+                "source_dataset":    $('#source').val(),
+                "message_text":      $('#message').val().trim()
+            }),
+            success: function(data) {
+                console.log("API response:", data);
+
+                currentLeadLogId = data.lead_log_id || null;
+                pendingFeedback = { quality: null, spam: null };
+
+                $('#results_container').removeClass('hidden');
+                $('#metrics_grid').empty();
+                $('#res_reasons').empty();
+                $('#res_table').empty();
+                $('#api_output').empty();
+
+                // Reset feedback bar
+                $('#feedback_prompt').removeClass('hidden');
+                $('#feedback_thanks').addClass('hidden');
+                $('#feedback_notes_row').addClass('hidden');
+                $('#feedback_notes').val('');
+                $('.feedback-btn').removeClass('selected-good selected-bad selected-partial').prop('disabled', false);
+
+                const metrics = [
+                    { label: 'Overall score',       val: `${data.overall_score} / 100`, sub: `${data.company_name}` },
+                    { label: 'Lead quality',         val: data.lead_quality },
+                    { label: 'Spam risk',            val: data.spam_risk },
+                    { label: 'Recommended action',   val: data.recommended_action }
+                ];
+
+                metrics.forEach(m => {
+                    $('#metrics_grid').append(
+                        `<div class="metric-card rounded-3xl p-5">
+                            <p class="result-label">${m.label}</p>
+                            <p class="text-2xl font-800 mt-2 text-white tracking-tight">${m.val}</p>
+                            ${m.sub ? `<p class="text-[11px] text-white/28 mt-2.5 font-semibold">${m.sub}</p>` : ''}
+                        </div>`
+                    );
+                });
+
+                if (data.why_this_lead_was_scored_this_way && data.why_this_lead_was_scored_this_way.length > 0) {
+                    data.why_this_lead_was_scored_this_way.forEach((r, i) => {
+                        $('#res_reasons').append(
+                            `<li class="flex items-start gap-3">
+                                <span class="flex-shrink-0 w-5 h-5 rounded-lg bg-white/05 flex items-center justify-center text-[10px] font-700 text-white/30 mt-0.5">${i+1}</span>
+                                <span>${r}</span>
+                            </li>`
+                        );
+                    });
+                } else {
+                    $('#res_reasons').append(`<li>The lead shows a mixed pattern and should be reviewed in context.</li>`);
+                }
+
+                for (const [k, v] of Object.entries(data.automatic_checks || {})) {
+                    $('#res_table').append(
+                        `<tr class="border-b soft-divider last:border-0">
+                            <td class="px-4 py-3 text-white/38 text-[12px] font-medium">${k.replace(/_/g, ' ')}</td>
+                            <td class="px-4 py-3 font-mono text-[12px] break-all text-white/65">${v === null ? '' : v}</td>
+                        </tr>`
+                    );
+                }
+
+                $('#res_summary_text').html(
+                    `This lead scored <strong class="text-white">${data.overall_score}/100</strong>. Quality: <strong class="text-white">${data.lead_quality}</strong>. Recommended action: <strong class="text-white">${data.recommended_action}</strong>.`
+                );
+
+                $('#api_output').text(JSON.stringify(data, null, 2));
+                $('#debug_area').toggleClass('hidden', !$('#debug_toggle').is(':checked'));
+
+                $('html, body').animate({ scrollTop: $('#results_container').offset().top - 24 }, 500);
+            },
+            error: function(xhr) {
+                console.error("API error:", xhr);
+                let msg = "The request could not be completed.";
+                if (xhr.responseJSON && xhr.responseJSON.detail) {
+                    if (Array.isArray(xhr.responseJSON.detail)) {
+                        msg = xhr.responseJSON.detail.map(x => {
+                            if (typeof x === 'object') {
+                                return `${(x.loc || []).join(' > ')}: ${x.msg || 'Invalid value'}`;
+                            }
+                            return String(x);
+                        }).join('<br>');
+                    } else if (typeof xhr.responseJSON.detail === 'object') {
+                        msg = JSON.stringify(xhr.responseJSON.detail, null, 2);
+                    } else {
+                        msg = xhr.responseJSON.detail;
+                    }
+                }
+                showModal('API error', msg);
+            },
+            complete: function() {
+                setLoadingState(false);
+            }
+        });
+    });
+
+    $('#check_api_btn').click(function() {
+        $.get($('#api_url').val().replace(/\/$/, '') + "/health")
+            .done(() => showModal('API status', 'The API is <strong>online</strong> and reachable.'))
+            .fail(() => showModal('API status', 'The API is <strong>offline</strong> or unreachable.'));
+    });
+
+    // Feedback button selection
+    $(document).on('click', '.feedback-btn', function() {
+        if (!currentLeadLogId) return;
+
+        pendingFeedback.quality = $(this).data('quality');
+        pendingFeedback.spam    = $(this).data('spam');
+
+        $('.feedback-btn').removeClass('selected-good selected-bad selected-partial');
+
+        if (pendingFeedback.quality === 'good_lead') {
+            $(this).addClass('selected-good');
+        } else if (pendingFeedback.spam === 'spam') {
+            $(this).addClass('selected-bad');
+        } else {
+            $(this).addClass('selected-partial');
+        }
+
+        $('#feedback_notes_row').removeClass('hidden');
+    });
+
+    // Feedback submission
+    $('#feedback_submit_btn').click(function() {
+        if (!currentLeadLogId || !pendingFeedback.quality) return;
+
+        const baseUrl = $('#api_url').val().replace(/\/$/, '');
+        const payload = {
+            lead_log_id:          currentLeadLogId,
+            actual_quality_label: pendingFeedback.quality,
+            actual_spam_label:    pendingFeedback.spam,
+            notes:                $('#feedback_notes').val().trim() || null
+        };
+
+        $(this).prop('disabled', true).text('Submitting...');
+
+        $.ajax({
+            url: baseUrl + "/feedback",
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(payload),
+            success: function() {
+                $('#feedback_prompt').addClass('hidden');
+                $('#feedback_thanks').removeClass('hidden').addClass('flex');
+            },
+            error: function(xhr) {
+                const msg = xhr.responseJSON?.detail || "Could not submit feedback.";
+                showModal('Feedback error', msg);
+                $('#feedback_submit_btn').prop('disabled', false).text('Submit feedback');
+            }
+        });
+    });
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lead Scoring Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <style>
+        body {
+            background:
+                radial-gradient(circle at top left, rgba(88, 166, 255, 0.08), transparent 28%),
+                radial-gradient(circle at top right, rgba(255, 75, 75, 0.08), transparent 30%),
+                #0b0f16;
+            color: #fafafa;
+        }
+
+        .sidebar {
+            background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
+            width: 88px;
+            min-width: 88px;
+            transition: width 0.28s ease, min-width 0.28s ease, box-shadow 0.28s ease;
+            overflow: hidden;
+            position: relative;
+            z-index: 20;
+        }
+
+        .sidebar.expanded,
+        .sidebar:hover {
+            width: 230px;
+            min-width: 230px;
+            box-shadow: 8px 0 30px rgba(0, 0, 0, 0.25);
+        }
+
+        .sidebar-label,
+        .sidebar-subtext,
+        .sidebar-section-title,
+        .sidebar-footer,
+        .sidebar-expanded-only {
+            opacity: 0;
+            transform: translateX(-8px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        .sidebar.expanded .sidebar-label,
+        .sidebar.expanded .sidebar-subtext,
+        .sidebar.expanded .sidebar-section-title,
+        .sidebar.expanded .sidebar-footer,
+        .sidebar.expanded .sidebar-expanded-only,
+        .sidebar:hover .sidebar-label,
+        .sidebar:hover .sidebar-subtext,
+        .sidebar:hover .sidebar-section-title,
+        .sidebar:hover .sidebar-footer,
+        .sidebar:hover .sidebar-expanded-only {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: auto;
+        }
+
+        .nav-item {
+            border: 1px solid transparent;
+            background: rgba(255, 255, 255, 0.02);
+            transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(148, 163, 184, 0.18);
+            transform: translateY(-1px);
+        }
+
+        .nav-item.active {
+            background: linear-gradient(90deg, rgba(255, 75, 75, 0.16), rgba(88, 166, 255, 0.08));
+            border-color: rgba(255, 75, 75, 0.28);
+        }
+
+        .main-shell {
+            background: rgba(17, 24, 39, 0.6);
+            border: 1px solid rgba(148, 163, 184, 0.12);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .panel {
+            background: rgba(17, 24, 39, 0.7);
+            border: 1px solid rgba(148, 163, 184, 0.12);
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+        }
+
+        .input-dark {
+            background: rgba(15, 23, 42, 0.88);
+            border: 1px solid rgba(71, 85, 105, 0.65);
+            color: #dbe3ee;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+
+        .input-dark::placeholder {
+            color: #6b7280;
+        }
+
+        .input-dark:focus {
+            border-color: #60a5fa;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.16);
+            background: rgba(15, 23, 42, 1);
+        }
+
+        .input-error {
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+        }
+
+        .result-label {
+            color: #94a3b8;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .required-star {
+            color: #ff6b6b;
+            margin-left: 4px;
+        }
+
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255,255,255,0.28);
+            border-top-color: #ffffff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .modal-backdrop {
+            background: rgba(0, 0, 0, 0.68);
+            backdrop-filter: blur(5px);
+        }
+
+        .metric-card {
+            background: linear-gradient(180deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.75));
+            border: 1px solid rgba(148, 163, 184, 0.12);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18);
+        }
+
+        .premium-button {
+            background: linear-gradient(135deg, #ff4b4b, #ff7b54);
+            box-shadow: 0 10px 25px rgba(255, 75, 75, 0.28);
+            transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+        }
+
+        .premium-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 14px 28px rgba(255, 75, 75, 0.34);
+        }
+
+        .premium-button:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        .icon-wrap {
+            min-width: 22px;
+            width: 22px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .soft-divider {
+            border-color: rgba(148, 163, 184, 0.12);
+        }
+
+        .feedback-btn {
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            background: rgba(255, 255, 255, 0.04);
+            color: #cbd5e1;
+            transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.15s ease;
+        }
+
+        .feedback-btn:hover {
+            background: rgba(255, 255, 255, 0.09);
+            border-color: rgba(148, 163, 184, 0.45);
+            color: #fff;
+            transform: translateY(-1px);
+        }
+
+        .feedback-btn.selected-good {
+            background: rgba(34, 197, 94, 0.15);
+            border-color: rgba(34, 197, 94, 0.5);
+            color: #86efac;
+        }
+
+        .feedback-btn.selected-bad {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.5);
+            color: #fca5a5;
+        }
+
+        .feedback-btn.selected-partial {
+            background: rgba(250, 204, 21, 0.12);
+            border-color: rgba(250, 204, 21, 0.4);
+            color: #fde68a;
+        }
+
+        .feedback-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            transform: none;
+        }
+    </style>
+</head>
+
+<body class="flex h-screen font-sans overflow-hidden">
+
+<aside id="sidebar" class="sidebar border-r border-slate-800/70 h-full flex flex-col">
+    <div class="p-4 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+            <div class="icon-wrap text-red-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3 13.5 12 3l9 10.5v7.5a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>
+                </svg>
+            </div>
+            <div class="sidebar-expanded-only">
+                <p class="text-sm font-semibold text-white">Lead AI Console</p>
+                <p class="sidebar-subtext text-[11px] text-slate-400">Premium workspace</p>
+            </div>
+        </div>
+
+        <button id="sidebar_toggle" class="sidebar-expanded-only text-slate-400 hover:text-white transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="m15.41 7.41-1.41-1.41L8.59 11.41 14 16.83l1.41-1.41L11.41 11z"/>
+            </svg>
+        </button>
+    </div>
+
+    <div class="px-3">
+        <p class="sidebar-section-title text-[10px] uppercase tracking-[0.18em] text-slate-500 mb-2 px-2">Navigation</p>
+
+        <div class="space-y-2">
+            <div class="nav-item active rounded-xl px-3 py-3 flex items-center gap-3 cursor-pointer">
+                <div class="icon-wrap text-red-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M5 3a2 2 0 0 0-2 2v14l4-3h12a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
+                    </svg>
+                </div>
+                <div class="sidebar-label">
+                    <p class="text-sm text-white font-medium">Lead scoring</p>
+                    <p class="sidebar-subtext text-[11px] text-slate-400">Live risk and quality view</p>
+                </div>
+            </div>
+
+            <!-- <div class="nav-item rounded-xl px-3 py-3 flex items-center gap-3 cursor-pointer opacity-70">
+                <div class="icon-wrap text-blue-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M4 19h16v2H4zM6 10h3v7H6zm5-4h3v11h-3zm5 2h3v9h-3z"/>
+                    </svg>
+                </div>
+                <div class="sidebar-label">
+                    <p class="text-sm text-white font-medium">Business insights</p>
+                    <p class="sidebar-subtext text-[11px] text-slate-400">Under Production</p>
+                </div>
+            </div> -->
+        </div>
+    </div>
+
+    <div class="px-3 mt-6">
+        <p class="sidebar-section-title text-[10px] uppercase tracking-[0.18em] text-slate-500 mb-2 px-2">Connection</p>
+
+        <div class="panel rounded-2xl p-3">
+            <div class="flex items-center gap-3 mb-2">
+                <div class="icon-wrap text-emerald-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4Z"/>
+                    </svg>
+                </div>
+                <div class="sidebar-expanded-only">
+                    <p class="text-xs text-slate-300">API base URL</p>
+                </div>
+            </div>
+
+            <input type="text" id="api_url" value="http://127.0.0.1:8000" class="input-dark w-full px-3 py-2 rounded-xl text-sm font-mono">
+
+            <button id="check_api_btn" class="sidebar-expanded-only mt-3 w-full border border-slate-700 hover:border-slate-500 text-slate-200 px-4 py-2 rounded-xl text-sm transition hover:bg-slate-800/60">
+                Check API
+            </button>
+
+            <label class="sidebar-expanded-only mt-3 flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" id="debug_toggle" class="rounded bg-gray-700">
+                <span class="text-xs text-slate-300">Show API debug output</span>
+            </label>
+        </div>
+    </div>
+
+    <div class="mt-auto p-3">
+        <div class="sidebar-footer panel rounded-2xl p-3">
+            <p class="text-[11px] text-slate-400 leading-5">
+                SMTP checks may add a short delay while mailbox and domain signals are validated.
+            </p>
+        </div>
+    </div>
+</aside>
+
+<main class="flex-1 overflow-y-auto p-6 lg:p-8">
+    <div class="main-shell rounded-3xl p-6 lg:p-8">
+        <header class="mb-8">
+            <div class="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
+                <div>
+                    <p class="text-xs text-slate-400 mb-2 uppercase tracking-[0.18em]">Lead analysis workspace</p>
+                    <h2 class="text-3xl lg:text-4xl font-bold text-white">Assess a lead</h2>
+                    <p class="text-sm text-slate-400 mt-4 max-w-3xl">
+                        Enter company details, contact email, website, and the incoming message. Fields marked with
+                        <span class="text-red-400">*</span> are mandatory.
+                    </p>
+                </div>
+
+                <div class="panel rounded-2xl px-4 py-3 self-start">
+                    <p class="text-[11px] uppercase tracking-[0.18em] text-slate-500">Runtime</p>
+                    <p class="text-sm text-slate-200 font-medium mt-1">SMTP + NLP + XGBoost</p>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-12 gap-8 mb-10">
+            <div class="col-span-12 xl:col-span-7">
+                <div class="panel rounded-3xl p-5 lg:p-6 space-y-5">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div class="md:col-span-2">
+                            <label class="text-xs mb-1.5 block text-slate-300">Company name <span class="required-star">*</span></label>
+                            <input type="text" id="company_name" class="input-dark w-full p-3 rounded-xl mandatory-field">
+                        </div>
+
+                        <div>
+                            <label class="text-xs mb-1.5 block text-slate-300">Contact email</label>
+                            <input type="email" id="contact_email" class="input-dark w-full p-3 rounded-xl" placeholder="name@company.com">
+                        </div>
+
+                        <div>
+                            <label class="text-xs mb-1.5 block text-slate-300">Website URL</label>
+                            <input type="text" id="website_url" class="input-dark w-full p-3 rounded-xl" placeholder="https://company.com">
+                        </div>
+
+                        <div>
+                            <label class="text-xs mb-1.5 block text-slate-300">Age (years) <span class="required-star">*</span></label>
+                            <input type="number" id="age" value="0" class="input-dark w-full p-3 rounded-xl mandatory-field">
+                        </div>
+
+                        <div>
+                            <label class="text-xs mb-1.5 block text-slate-300">Avg Score <span class="required-star">*</span></label>
+                            <input type="number" id="avg_score" value="0" class="input-dark w-full p-3 rounded-xl mandatory-field">
+                        </div>
+
+                        <div>
+                            <label class="text-xs mb-1.5 block text-slate-300">Number of Reviews <span class="required-star">*</span></label>
+                            <input type="number" id="reviews" value="0" class="input-dark w-full p-3 rounded-xl mandatory-field">
+                        </div>
+
+                        <div>
+                            <label class="text-xs mb-1.5 block text-slate-300">Industry</label>
+                            <input type="text" id="industry" class="input-dark w-full p-3 rounded-xl">
+                        </div>
+
+                        <div>
+                            <label class="text-xs mb-1.5 block text-slate-300">Company status</label>
+                            <select id="status" class="input-dark w-full p-3 rounded-xl">
+                                <option value="active">active</option>
+                                <option value="dissolved">dissolved</option>
+                                <option value="unknown" selected>unknown</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="text-xs mb-1.5 block text-slate-300">Company type</label>
+                            <select id="type" class="input-dark w-full p-3 rounded-xl">
+                                <option value="private-limited">private-limited</option>
+                                <option value="public-limited">public-limited</option>
+                                <option value="unknown" selected>unknown</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="text-xs mb-1.5 block text-slate-300">Company size</label>
+                            <select id="size" class="input-dark w-full p-3 rounded-xl">
+                                <option value="small">small</option>
+                                <option value="medium">medium</option>
+                                <option value="large">large</option>
+                                <option value="unknown" selected>unknown</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="text-xs mb-1.5 block text-slate-300">Country</label>
+                            <input type="text" id="country" class="input-dark w-full p-3 rounded-xl">
+                        </div>
+
+                        <div>
+                            <label class="text-xs mb-1.5 block text-slate-300">Location</label>
+                            <input type="text" id="location" class="input-dark w-full p-3 rounded-xl">
+                        </div>
+
+                        <div>
+                            <label class="text-xs mb-1.5 block text-slate-300">Email/domain type</label>
+                            <select id="domain" class="input-dark w-full p-3 rounded-xl">
+                                <option value="corporate">corporate</option>
+                                <option value="free">free</option>
+                                <option value="unknown" selected>unknown</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="text-xs mb-1.5 block text-slate-300">Lead source type</label>
+                            <select id="source" class="input-dark w-full p-3 rounded-xl">
+                                <option value="sms_spam_collection">sms_spam_collection</option>
+                                <option value="dataset_10191">dataset_10191</option>
+                                <option value="dataset_5971">dataset_5971</option>
+                                <option value="enron">enron</option>
+                                <option value="unknown" selected>unknown</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="pt-1">
+                        <button id="btn_assess" class="premium-button disabled:bg-red-900 text-white px-8 py-3 rounded-2xl font-bold transition mt-2 flex items-center justify-center gap-3 min-w-[190px]">
+                            <span id="btn_spinner" class="spinner hidden"></span>
+                            <span id="btn_text">Assess Lead</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-span-12 xl:col-span-5">
+                <div class="panel rounded-3xl p-5 lg:p-6 h-full">
+                    <label class="text-xs mb-2 block text-slate-300">Incoming message <span class="required-star">*</span></label>
+                    <textarea id="message" class="input-dark w-full h-[520px] rounded-2xl p-4 resize-none mandatory-field" placeholder="Paste the incoming message here..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <div id="results_container" class="hidden space-y-10 border-t soft-divider pt-10 pb-8">
+            <div class="flex items-center justify-between gap-4">
+                <h3 class="text-2xl font-bold text-white">Lead assessment</h3>
+                <div class="text-xs text-slate-500 uppercase tracking-[0.16em]">Rendered from API response</div>
+            </div>
+
+            <div id="metrics_grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5"></div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+                <div id="reasons_section" class="xl:col-span-5 panel rounded-3xl p-5 lg:p-6">
+                    <h4 class="text-lg font-bold mb-4 text-white">Why this lead was scored this way</h4>
+                    <ol id="res_reasons" class="list-decimal list-inside space-y-2.5 text-sm text-slate-300"></ol>
+                </div>
+
+                <div id="summary_callout" class="xl:col-span-7 panel rounded-3xl p-5 lg:p-6 border-l-4 border-blue-500">
+                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500 mb-3">Executive summary</p>
+                    <p id="res_summary_text" class="text-sm text-blue-100 leading-7"></p>
+                </div>
+            </div>
+
+            <div id="feedback_section" class="panel rounded-3xl p-5 lg:p-6 border border-slate-700/60">
+                <div id="feedback_prompt">
+                    <p class="text-sm font-semibold text-white mb-1">Was this assessment correct?</p>
+                    <p class="text-xs text-slate-400 mb-4">Your feedback helps improve future scoring.</p>
+                    <div class="flex flex-wrap gap-3">
+                        <button data-quality="good_lead" data-spam="ham"
+                            class="feedback-btn px-5 py-2.5 rounded-xl text-sm font-medium">
+                            ✓ &nbsp;Yes, good lead
+                        </button>
+                        <button data-quality="bad_lead" data-spam="spam"
+                            class="feedback-btn px-5 py-2.5 rounded-xl text-sm font-medium">
+                            ✗ &nbsp;Wrong — this was spam
+                        </button>
+                        <button data-quality="bad_lead" data-spam="ham"
+                            class="feedback-btn px-5 py-2.5 rounded-xl text-sm font-medium">
+                            ~ &nbsp;Partially right
+                        </button>
+                    </div>
+                    <div class="mt-4 hidden" id="feedback_notes_row">
+                        <input type="text" id="feedback_notes" placeholder="Optional: add a note (e.g. 'known spammer')"
+                            class="input-dark w-full md:w-96 px-3 py-2 rounded-xl text-sm">
+                        <button id="feedback_submit_btn"
+                            class="mt-2 md:mt-0 md:ml-3 premium-button text-white px-5 py-2 rounded-xl text-sm font-semibold">
+                            Submit feedback
+                        </button>
+                    </div>
+                </div>
+                <div id="feedback_thanks" class="hidden flex items-center gap-3">
+                    <span class="text-emerald-400 text-xl">✓</span>
+                    <div>
+                        <p class="text-sm font-semibold text-white">Feedback recorded</p>
+                        <p class="text-xs text-slate-400 mt-0.5">Thank you — this will be used to retrain the models.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="checks_section" class="panel rounded-3xl p-5 lg:p-6">
+                <h4 class="text-lg font-bold mb-4 text-white">Automatic checks performed</h4>
+                <div class="border soft-divider rounded-2xl overflow-hidden">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-900/70 text-slate-400 border-b soft-divider">
+                            <tr>
+                                <th class="p-3">Check</th>
+                                <th class="p-3">Value</th>
+                            </tr>
+                        </thead>
+                        <tbody id="res_table"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="debug_area" class="hidden panel rounded-3xl p-5 lg:p-6">
+                <h4 class="text-lg font-bold mb-4 text-white">API debug output</h4>
+                <pre id="api_output" class="bg-black text-green-400 p-6 rounded-2xl text-xs font-mono overflow-auto border border-gray-700 max-h-[500px]"></pre>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div id="custom_modal" class="hidden fixed inset-0 z-50 modal-backdrop items-center justify-center">
+    <div class="w-[92%] max-w-md bg-[#141b28] border border-slate-700 rounded-3xl shadow-2xl p-6">
+        <div>
+            <h4 id="modal_title" class="text-xl font-bold text-white">Validation message</h4>
+            <p id="modal_message" class="text-sm text-slate-300 mt-3 leading-6"></p>
+        </div>
+        <div class="mt-6 flex justify-end">
+            <button id="modal_ok_btn" class="bg-[#f0ba8a] hover:bg-[#e7ab74] text-black font-semibold px-6 py-2 rounded-full border-2 border-[#5a3e2c] shadow">
+                OK
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    let sidebarPinned = false;
+    let currentLeadLogId = null;
+    let pendingFeedback = { quality: null, spam: null };
+
+    function applySidebarState() {
+        if (sidebarPinned) {
+            $('#sidebar').addClass('expanded');
+        } else {
+            $('#sidebar').removeClass('expanded');
+        }
+    }
+
+    $('#sidebar_toggle').click(function() {
+        sidebarPinned = !sidebarPinned;
+        applySidebarState();
+    });
+
+    function showModal(title, message) {
+        $('#modal_title').text(title);
+        $('#modal_message').html(message);
+        $('#custom_modal').removeClass('hidden').addClass('flex');
+    }
+
+    function hideModal() {
+        $('#custom_modal').addClass('hidden').removeClass('flex');
+    }
+
+    function setLoadingState(isLoading) {
+        $('#btn_assess').prop('disabled', isLoading);
+        $('#btn_spinner').toggleClass('hidden', !isLoading);
+        $('#btn_text').text(isLoading ? 'Assessing...' : 'Assess Lead');
+    }
+
+    function clearInputErrors() {
+        $('.mandatory-field').removeClass('input-error');
+    }
+
+    function validateForm() {
+        clearInputErrors();
+
+        const missing = [];
+
+        const companyName = $('#company_name').val().trim();
+        const age = $('#age').val().trim();
+        const avgScore = $('#avg_score').val().trim();
+        const reviews = $('#reviews').val().trim();
+        const message = $('#message').val().trim();
+
+        if (!companyName) {
+            $('#company_name').addClass('input-error');
+            missing.push('Company name');
+        }
+        if (age === '') {
+            $('#age').addClass('input-error');
+            missing.push('Age (years)');
+        }
+        if (avgScore === '') {
+            $('#avg_score').addClass('input-error');
+            missing.push('Avg Score');
+        }
+        if (reviews === '') {
+            $('#reviews').addClass('input-error');
+            missing.push('Reviews');
+        }
+        if (!message) {
+            $('#message').addClass('input-error');
+            missing.push('Incoming message');
+        }
+
+        if (missing.length > 0) {
+            showModal(
+                'Missing required inputs',
+                `Please fill in the following mandatory field(s):<br><br><strong>${missing.join('<br>')}</strong>`
+            );
+            return false;
+        }
+
+        const avgScoreNum = parseFloat(avgScore);
+        if (isNaN(avgScoreNum) || avgScoreNum < 0 || avgScoreNum > 5) {
+            $('#avg_score').addClass('input-error');
+            showModal(
+                'Invalid value',
+                'Average score must be a number between <strong>0</strong> and <strong>5</strong>.'
+            );
+            return false;
+        }
+
+        const ageNum = parseFloat(age);
+        if (isNaN(ageNum) || ageNum < 0) {
+            $('#age').addClass('input-error');
+            showModal(
+                'Invalid value',
+                'Age (years) must be a number greater than or equal to <strong>0</strong>.'
+            );
+            return false;
+        }
+
+        const reviewsNum = parseInt(reviews);
+        if (isNaN(reviewsNum) || reviewsNum < 0) {
+            $('#reviews').addClass('input-error');
+            showModal(
+                'Invalid value',
+                'Reviews must be a whole number greater than or equal to <strong>0</strong>.'
+            );
+            return false;
+        }
+
+        return true;
+    }
+
+    $('#modal_ok_btn').click(function() {
+        hideModal();
+    });
+
+    $('#custom_modal').click(function(e) {
+        if (e.target.id === 'custom_modal') {
+            hideModal();
+        }
+    });
+
+    $('.mandatory-field').on('input change', function() {
+        $(this).removeClass('input-error');
+    });
+
+    $('#btn_assess').click(function() {
+        if (!validateForm()) {
+            return;
+        }
+
+        const baseUrl = $('#api_url').val().replace(/\/$/, '');
+        setLoadingState(true);
+
+        $.ajax({
+            url: baseUrl + "/score",
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+                "company_name": $('#company_name').val().trim(),
+                "contact_email": $('#contact_email').val().trim(),
+                "website_url": $('#website_url').val().trim(),
+                "company_age_years": parseFloat($('#age').val()),
+                "avg_review_score": parseFloat($('#avg_score').val()),
+                "review_count": parseInt($('#reviews').val()),
+                "company_status": $('#status').val(),
+                "company_category": $('#type').val(),
+                "industry": $('#industry').val().trim(),
+                "company_size": $('#size').val(),
+                "country": $('#country').val().trim(),
+                "location": $('#location').val().trim(),
+                "domain_type": $('#domain').val(),
+                "source_dataset": $('#source').val(),
+                "message_text": $('#message').val().trim()
+            }),
+            success: function(data) {
+                console.log("API response:", data);
+
+                currentLeadLogId = data.lead_log_id || null;
+                pendingFeedback = { quality: null, spam: null };
+
+                $('#results_container').removeClass('hidden');
+                $('#metrics_grid').empty();
+                $('#res_reasons').empty();
+                $('#res_table').empty();
+                $('#api_output').empty();
+
+                // Reset feedback bar
+                $('#feedback_prompt').removeClass('hidden');
+                $('#feedback_thanks').addClass('hidden');
+                $('#feedback_notes_row').addClass('hidden');
+                $('#feedback_notes').val('');
+                $('.feedback-btn').removeClass('selected-good selected-bad selected-partial').prop('disabled', false);
+
+                const metrics = [
+                    { label: 'Overall score', val: `${data.overall_score} / 100`, sub: `Company: ${data.company_name}` },
+                    { label: 'Lead quality', val: data.lead_quality },
+                    { label: 'Spam risk', val: data.spam_risk },
+                    { label: 'Recommended action', val: data.recommended_action }
+                ];
+
+                metrics.forEach(m => {
+                    $('#metrics_grid').append(
+                        `<div class="metric-card rounded-3xl p-5">
+                            <p class="result-label">${m.label}</p>
+                            <p class="text-3xl font-bold mt-2 text-white">${m.val}</p>
+                            ${m.sub ? `<p class="text-xs text-slate-400 mt-3 font-semibold">${m.sub}</p>` : ''}
+                        </div>`
+                    );
+                });
+
+                if (data.why_this_lead_was_scored_this_way && data.why_this_lead_was_scored_this_way.length > 0) {
+                    data.why_this_lead_was_scored_this_way.forEach(r => {
+                        $('#res_reasons').append(`<li>${r}</li>`);
+                    });
+                } else {
+                    $('#res_reasons').append(`<li>The lead shows a mixed pattern and should be reviewed in context.</li>`);
+                }
+
+                for (const [k, v] of Object.entries(data.automatic_checks || {})) {
+                    $('#res_table').append(
+                        `<tr class="border-b soft-divider last:border-0">
+                            <td class="p-3 text-slate-400">${k.replace(/_/g, ' ')}</td>
+                            <td class="p-3 font-mono break-all text-slate-200">${v === null ? '' : v}</td>
+                        </tr>`
+                    );
+                }
+
+                $('#res_summary_text').html(
+                    `This lead scored <strong>${data.overall_score}/100</strong>. Quality: <strong>${data.lead_quality}</strong>. Recommended action: <strong>${data.recommended_action}</strong>.`
+                );
+
+                $('#api_output').text(JSON.stringify(data, null, 2));
+                $('#debug_area').toggleClass('hidden', !$('#debug_toggle').is(':checked'));
+
+                $('html, body').animate({
+                    scrollTop: $('#results_container').offset().top - 20
+                }, 500);
+            },
+            error: function(xhr) {
+                console.error("API error:", xhr);
+
+                let msg = "The request could not be completed.";
+                if (xhr.responseJSON && xhr.responseJSON.detail) {
+                    if (Array.isArray(xhr.responseJSON.detail)) {
+                        msg = xhr.responseJSON.detail.map(x => {
+                            if (typeof x === 'object') {
+                                return `${(x.loc || []).join(' → ')}: ${x.msg || 'Invalid value'}`;
+                            }
+                            return String(x);
+                        }).join('<br>');
+                    } else if (typeof xhr.responseJSON.detail === 'object') {
+                        msg = JSON.stringify(xhr.responseJSON.detail, null, 2);
+                    } else {
+                        msg = xhr.responseJSON.detail;
+                    }
+                }
+
+                showModal('API error', msg);
+            },
+            complete: function() {
+                setLoadingState(false);
+            }
+        });
+    });
+
+    $('#check_api_btn').click(function() {
+        $.get($('#api_url').val().replace(/\/$/, '') + "/health")
+            .done(() => showModal('API status', 'The API is <strong>online</strong> and reachable.'))
+            .fail(() => showModal('API status', 'The API is <strong>offline</strong> or unreachable.'));
+    });
+
+    // Feedback button selection
+    $(document).on('click', '.feedback-btn', function() {
+        if (!currentLeadLogId) return;
+
+        pendingFeedback.quality = $(this).data('quality');
+        pendingFeedback.spam    = $(this).data('spam');
+
+        $('.feedback-btn').removeClass('selected-good selected-bad selected-partial');
+
+        if (pendingFeedback.quality === 'good_lead') {
+            $(this).addClass('selected-good');
+        } else if (pendingFeedback.spam === 'spam') {
+            $(this).addClass('selected-bad');
+        } else {
+            $(this).addClass('selected-partial');
+        }
+
+        $('#feedback_notes_row').removeClass('hidden');
+    });
+
+    // Feedback submission
+    $('#feedback_submit_btn').click(function() {
+        if (!currentLeadLogId || !pendingFeedback.quality) return;
+
+        const baseUrl = $('#api_url').val().replace(/\/$/, '');
+        const payload = {
+            lead_log_id: currentLeadLogId,
+            actual_quality_label: pendingFeedback.quality,
+            actual_spam_label: pendingFeedback.spam,
+            notes: $('#feedback_notes').val().trim() || null
+        };
+
+        $(this).prop('disabled', true).text('Submitting...');
+
+        $.ajax({
+            url: baseUrl + "/feedback",
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(payload),
+            success: function() {
+                $('#feedback_prompt').addClass('hidden');
+                $('#feedback_thanks').removeClass('hidden');
+            },
+            error: function(xhr) {
+                const msg = xhr.responseJSON?.detail || "Could not submit feedback.";
+                showModal('Feedback error', msg);
+                $('#feedback_submit_btn').prop('disabled', false).text('Submit feedback');
+            }
+        });
+    });
+});
+</script>
+
+</body>
+</html>

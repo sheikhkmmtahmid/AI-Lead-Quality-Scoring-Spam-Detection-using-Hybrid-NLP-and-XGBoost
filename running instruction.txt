@@ -1,0 +1,9 @@
+pip install -r requirements.txt
+
+install:
+pip install fastapi uvicorn transformers torch
+pip install request
+
+Terminal 1:
+uvicorn api.main:app --reload
+streamlit run app/streamlit_app.py
