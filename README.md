@@ -1,7 +1,6 @@
 # AI-Powered Lead and Contact Form Quality Scoring System
 
-A production-ready machine learning system that automatically scores the quality of inbound business leads and contact form submissions. It cascades two fine-tuned transformer models (BERT and RoBERTa) with an XGBoost regressor, live email/DNS validation, and SHAP-based explainability into a single REST API with a polished browser UI.
-
+A production-ready machine learning system, developed in collaboration with [Palash Kumar](https://github.com/palash-kumar), that automatically scores the quality of inbound business leads and contact form submissions. It cascades two fine-tuned transformer models (BERT and RoBERTa) with an XGBoost regressor, live email/DNS validation, and SHAP-based explainability into a single REST API with a polished browser UI.
 ---
 
 ## Table of Contents
