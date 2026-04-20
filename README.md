@@ -2,6 +2,7 @@
 
 A production-ready machine learning system that automatically scores the quality of inbound business leads and contact form submissions. It cascades two fine-tuned transformer models (BERT and RoBERTa) with an XGBoost regressor, live email/DNS validation, and SHAP-based explainability into a single REST API with a polished browser UI. This project was developed in collaboration with <a href="https://github.com/palash-kumar" target="_blank">Palash Kumar</a>.
 ---
+Built by [SKMMT](https://skmmt.rootexception.com/)
 
 ## Table of Contents
 
